@@ -1,6 +1,11 @@
 services:
   colday_app:
-    container_name: coldayyy/colday2026:latest
-
+    image: coldayyy/colday2026:latest
+    container_name: colday_app
+    network_mode: "container:amnezia-awg"
     restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./static/uploads:/colday_app/static/uploads
 
