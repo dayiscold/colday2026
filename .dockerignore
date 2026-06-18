@@ -1,0 +1,12 @@
+sql
+.venv
+.idea
+/colday2026.exe
+static/uploads/
+/colday2026
+.env
+CLAUDE.md
+database
+data
+*.db
+sql

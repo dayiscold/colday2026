@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>COLDAY · Свет Среди Холода</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Underdog&display=swap" rel="stylesheet">
+<style>
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: #05070c;
+    color: #e9eff6;
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: rgba(116, 215, 255, 0.25); }
+  * { box-sizing: border-box; }
+
+  @keyframes cd-bob {
+    0%, 100% { transform: translateY(0); opacity: 0.5; }
+    50% { transform: translateY(8px); opacity: 1; }
+  }
+  @keyframes cd-grain {
+    0%   { transform: translate(0, 0); }
+    20%  { transform: translate(-6%, 5%); }
+    40%  { transform: translate(-10%, -6%); }
+    60%  { transform: translate(6%, -10%); }
+    80%  { transform: translate(-4%, 9%); }
+    100% { transform: translate(0, 0); }
+  }
+  @keyframes cd-intro {
+    0%, 82% { opacity: 1; }
+    100%    { opacity: 0; visibility: hidden; }
+  }
+  @keyframes cd-ring-form {
+    0%   { transform: scale(0); opacity: 0; filter: blur(26px); }
+    45%  { opacity: 1; }
+    100% { transform: scale(1); opacity: 1; filter: blur(0); }
+  }
+  @keyframes cd-glow-pulse {
+    0%, 100% { opacity: 0.65; transform: scale(1); }
+    50%      { opacity: 1;    transform: scale(1.1); }
+  }
+  @keyframes cd-word-in {
+    0%, 32% { opacity: 0; transform: translateY(16px); letter-spacing: 0.55em; }
+    100%    { opacity: 1; transform: translateY(0);    letter-spacing: 0.06em; }
+  }
+  @keyframes cd-disc-collapse {
+    0%   { transform: scale(1); }
+    70%  { transform: scale(1); }
+    100% { transform: scale(1.55); opacity: 0; }
+  }
+
+  /* Intro overlay */
+  #cd-intro {
+    position: fixed; inset: 0; z-index: 60;
+    background: radial-gradient(120% 120% at 50% 46%, #070b15 0%, #02040a 68%);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 52px;
+    animation: cd-intro 3.8s ease-in forwards;
+  }
+  .cd-intro-disc {
+    position: relative; width: 196px; height: 196px;
+    display: flex; align-items: center; justify-content: center;
+    animation:
+      cd-ring-form 2.5s cubic-bezier(.16, .84, .3, 1) both,
+      cd-disc-collapse 3.8s ease-in forwards;
+  }
+  .cd-intro-glow {
+    position: absolute; inset: -96px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(96, 168, 216, 0.34) 0%, rgba(58, 116, 166, 0.12) 40%, rgba(0, 0, 0, 0) 70%);
+    animation: cd-glow-pulse 2.8s ease-in-out infinite;
+  }
+  .cd-intro-core {
+    position: absolute; inset: 0; border-radius: 50%;
+    background: radial-gradient(circle at 50% 50%, #010204 60%, #04070d 100%);
+    box-shadow:
+      0 0 0 1.5px rgba(150, 200, 235, 0.65),
+      0 0 46px 7px rgba(110, 186, 255, 0.5),
+      inset 0 0 34px 5px rgba(0, 0, 0, 0.95);
+  }
+  .cd-intro-word {
+    font-family: 'Underdog', system-ui, cursive;
+    font-size: clamp(44px, 10vw, 104px);
+    letter-spacing: 0.14em;
+    padding-left: 0.14em;
+    color: #eef4fc;
+    text-shadow: 0 0 44px rgba(110, 186, 255, 0.4);
+    animation: cd-word-in 2.7s ease both;
+  }
+
+  /* Background layers */
+  .cd-bg {
+    position: fixed; inset: 0; z-index: 0;
+    background: radial-gradient(120% 90% at 50% 42%,
+      rgba(13, 22, 38, 0) 0%,
+      rgba(5, 7, 12, 0) 38%,
+      rgba(5, 7, 12, 0.55) 72%,
+      rgba(3, 4, 8, 0.9) 100%);
+    pointer-events: none;
+  }
+  .cd-bg canvas {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    display: block;
+  }
+  .cd-vignette {
+    position: fixed; inset: 0; z-index: 1; pointer-events: none;
+    background: radial-gradient(140% 120% at 50% 35%, rgba(5, 7, 12, 0) 55%, rgba(4, 5, 9, 0.5) 100%);
+  }
+  .cd-grain {
+    position: fixed; inset: -60%; z-index: 4;
+    pointer-events: none;
+    opacity: 0.12;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 125px 125px;
+    animation: cd-grain 0.62s steps(3) infinite;
+  }
+
+  .cd-content { position: relative; z-index: 2; }
+
+  /* Nav */
+  nav.cd-nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 20;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 22px 40px;
+    backdrop-filter: blur(10px);
+    background: linear-gradient(180deg, rgba(5, 7, 12, 0.55), rgba(5, 7, 12, 0));
+  }
+  .cd-nav-brand {
+    font-family: 'Underdog', system-ui, cursive;
+    font-size: 26px;
+    letter-spacing: 0.22em;
+    color: #e9eff6;
+    text-decoration: none;
+    line-height: 1;
+    padding-left: 0.22em;
+  }
+  .cd-nav-links { display: flex; gap: 30px; align-items: center; }
+  .cd-nav-link {
+    font-family: 'Space Mono', monospace;
+    font-size: 12.5px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #8a98a8;
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  .cd-nav-link:hover { color: #74d7ff; }
+  .cd-nav-tg {
+    display: inline-flex; align-items: center; gap: 9px;
+    text-decoration: none;
+    padding: 9px 17px 9px 12px;
+    border-radius: 100px;
+    background: rgba(34, 158, 217, 0.14);
+    border: 1px solid rgba(42, 171, 238, 0.5);
+    color: #dff0fb;
+    font-family: 'Space Mono', monospace;
+    font-size: 11.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .cd-nav-tg:hover {
+    background: rgba(34, 158, 217, 0.28);
+    border-color: rgba(42, 171, 238, 0.8);
+  }
+  .cd-nav-tg svg { flex: 0 0 auto; }
+
+  /* Hero */
+  .cd-hero {
+    position: relative;
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    padding: 120px 24px 80px;
+  }
+  .cd-hero h1 {
+    margin: 0;
+    font-family: 'Underdog', system-ui, cursive;
+    font-size: clamp(70px, 16vw, 240px);
+    font-weight: 400;
+    letter-spacing: 0.05em;
+    line-height: 0.92;
+    color: #f4f8ff;
+    text-shadow:
+      0 0 60px rgba(116, 215, 255, 0.18),
+      0 0 8px rgba(5, 7, 12, 0.9);
+    padding-left: 0.05em;
+  }
+  .cd-hero p {
+    margin: 32px 0 0;
+    font-size: 22px;
+    line-height: 1.5;
+    letter-spacing: 0.14em;
+    color: #c4d3e3;
+    font-weight: 400;
+  }
+  .cd-hero-cta {
+    margin-top: 40px;
+    display: inline-flex; align-items: center; gap: 12px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12.5px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #d7e4f2;
+    text-decoration: none;
+    border: 1px solid rgba(116, 215, 255, 0.28);
+    padding: 14px 26px;
+    border-radius: 100px;
+    background: rgba(116, 215, 255, 0.04);
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .cd-hero-cta:hover {
+    background: rgba(116, 215, 255, 0.12);
+    border-color: rgba(116, 215, 255, 0.5);
+  }
+  .cd-hero-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #74d7ff;
+    box-shadow: 0 0 10px #74d7ff;
+  }
+  .cd-scroll-hint {
+    position: absolute; bottom: 34px; left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: #6c7a8a;
+    display: flex; flex-direction: column;
+    align-items: center; gap: 10px;
+  }
+  .cd-scroll-hint span {
+    display: block; width: 1px; height: 26px;
+    background: linear-gradient(#74d7ff, transparent);
+    animation: cd-bob 2s ease-in-out infinite;
+  }
+
+  /* Music section */
+  .cd-music {
+    position: relative;
+    padding: 130px 40px 120px;
+    background: linear-gradient(180deg,
+      rgba(5, 7, 12, 0) 0%,
+      rgba(6, 9, 15, 0.78) 12%,
+      rgba(6, 9, 15, 0.86) 100%);
+    backdrop-filter: blur(3px);
+  }
+  .cd-music-wrap { max-width: 1120px; margin: 0 auto; }
+  .cd-section-title {
+    margin: 0;
+    font-size: clamp(40px, 6vw, 78px);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: #eef4fc;
+  }
+  .cd-music-head { margin-bottom: 64px; }
+
+  .cd-featured {
+    display: grid;
+    grid-template-columns: minmax(0, 380px) 1fr;
+    gap: 54px;
+    align-items: center;
+    padding-bottom: 70px;
+    border-bottom: 1px solid rgba(116, 215, 255, 0.12);
+  }
+  @media (max-width: 760px) {
+    .cd-featured { grid-template-columns: 1fr; }
+    .cd-rest { grid-template-columns: 1fr !important; }
+  }
+  .cd-cover {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border: 1px solid rgba(116, 215, 255, 0.16);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 40px 90px -40px rgba(0, 0, 0, 0.8);
+    background: rgba(116, 215, 255, 0.05);
+  }
+  .cd-cover img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .cd-featured-meta {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+    color: #74d7ff;
+    margin-bottom: 18px;
+  }
+  .cd-featured-title {
+    margin: 0;
+    font-family: 'Underdog', system-ui, cursive;
+    font-size: clamp(42px, 5.4vw, 66px);
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    color: #f2f7ff;
+    line-height: 1.0;
+  }
+  .cd-featured-desc {
+    max-width: 460px;
+    margin: 22px 0 0;
+    font-size: 16.5px;
+    line-height: 1.65;
+    color: #9fabba;
+  }
+  .cd-featured-links {
+    display: flex; flex-wrap: wrap; gap: 12px;
+    margin-top: 32px;
+  }
+  .cd-link-pill {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #d7e4f2;
+    text-decoration: none;
+    border: 1px solid rgba(116, 215, 255, 0.28);
+    padding: 12px 22px;
+    border-radius: 100px;
+    transition: background 0.15s;
+  }
+  .cd-link-pill:hover { background: rgba(116, 215, 255, 0.12); }
+
+  .cd-rest {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    margin-top: 56px;
+  }
+  .cd-rest-item { display: flex; gap: 24px; align-items: center; }
+  .cd-rest-cover {
+    position: relative;
+    width: 132px; height: 132px;
+    flex: 0 0 auto;
+    border: 1px solid rgba(116, 215, 255, 0.16);
+    border-radius: 6px;
+    overflow: hidden;
+    background: rgba(116, 215, 255, 0.06);
+  }
+  .cd-rest-cover img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .cd-rest-meta {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #74d7ff;
+    margin-bottom: 9px;
+  }
+  .cd-rest-title {
+    margin: 0;
+    font-family: 'Underdog', system-ui, cursive;
+    font-size: 29px;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    color: #eef4fc;
+  }
+  .cd-rest-desc {
+    margin: 10px 0 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #8c98a7;
+  }
+
+  /* Contacts */
+  .cd-contacts {
+    position: relative;
+    padding: 130px 40px 90px;
+    background: rgba(6, 9, 15, 0.88);
+    backdrop-filter: blur(3px);
+    border-top: 1px solid rgba(116, 215, 255, 0.08);
+  }
+  .cd-contacts-wrap { max-width: 1120px; margin: 0 auto; }
+  .cd-contacts-head { margin-bottom: 60px; }
+  .cd-mail-row { display: flex; flex-direction: column; gap: 18px; }
+  .cd-mail {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(28px, 5vw, 52px);
+    font-weight: 400;
+    letter-spacing: 0.01em;
+    color: #eef4fc;
+    text-decoration: none;
+    width: fit-content;
+    transition: color 0.15s;
+  }
+  .cd-mail:hover { color: #74d7ff; }
+  .cd-footer {
+    margin-top: 96px;
+    padding-top: 28px;
+    border-top: 1px solid rgba(116, 215, 255, 0.1);
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 12px;
+  }
+  .cd-footer-motto {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.3em;
+    color: #e9eff6;
+    font-weight: 700;
+  }
+  .cd-footer-copy {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #6c7a8a;
+  }
+</style>
+</head>
+<body>
+
+<div id="cd-intro">
+  <div class="cd-intro-disc">
+    <div class="cd-intro-glow"></div>
+    <div class="cd-intro-core"></div>
+  </div>
+  <div class="cd-intro-word">COLDAY</div>
+</div>
+
+<div class="cd-bg"><canvas id="cd-canvas"></canvas></div>
+<div class="cd-vignette"></div>
+<div class="cd-grain"></div>
+
+<div class="cd-content">
+
+  <nav class="cd-nav">
+    <a href="#top" class="cd-nav-brand">COLDAY</a>
+    <div class="cd-nav-links">
+      <a href="#top" class="cd-nav-link">Главная</a>
+      <a href="#music" class="cd-nav-link">Музыка</a>
+      <a href="#contacts" class="cd-nav-link">Контакты</a>
+      <a href="https://t.me/coldaybigstepper" target="_blank" rel="noopener" class="cd-nav-tg">
+        <svg width="20" height="20" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="tgn" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#2AABEE"/>
+              <stop offset="1" stop-color="#229ED9"/>
+            </linearGradient>
+          </defs>
+          <circle cx="120" cy="120" r="120" fill="url(#tgn)"/>
+          <path fill="#ffffff" d="M53.4 118.7c34.9-15.2 58.2-25.2 69.9-30.1 33.3-13.8 40.2-16.3 44.7-16.4 1 0 3.2.2 4.7 1.4 1.2 1 1.5 2.3 1.7 3.3.2 1 .4 3.1.2 4.8-1.8 19.5-9.8 66.9-13.9 88.8-1.7 9.3-5.1 12.4-8.4 12.7-7.1.7-12.5-4.7-19.4-9.2-10.8-7.1-16.9-11.5-27.4-18.4-12.1-8-4.3-12.4 2.7-19.6 1.8-1.9 33.4-30.6 34-33.2.1-.3.1-1.5-.6-2.1-.7-.6-1.7-.4-2.5-.2-1.1.2-17.9 11.4-50.6 33.4-4.8 3.3-9.1 4.9-13 4.8-4.3-.1-12.5-2.4-18.7-4.4-7.5-2.4-13.5-3.7-13-7.9.3-2.2 3.3-4.4 9.1-6.8z"/>
+        </svg>
+        Telegram
+      </a>
+    </div>
+  </nav>
+
+  <section id="top" class="cd-hero">
+    <h1>COLDAY</h1>
+    <p>Свет Среди Холода</p>
+    <a href="#music" class="cd-hero-cta" id="cd-hero-cta">
+      <span class="cd-hero-dot"></span>
+      <span id="cd-hero-cta-label">Новые релизы</span>
+    </a>
+    <div class="cd-scroll-hint">Вниз<span></span></div>
+  </section>
+
+  <section id="music" class="cd-music">
+    <div class="cd-music-wrap">
+      <div class="cd-music-head">
+        <h2 class="cd-section-title">Релизы</h2>
+      </div>
+      <div id="cd-featured-slot"></div>
+      <div id="cd-rest-slot" class="cd-rest"></div>
+    </div>
+  </section>
+
+  <section id="contacts" class="cd-contacts">
+    <div class="cd-contacts-wrap">
+      <div class="cd-contacts-head">
+        <h2 class="cd-section-title">Контакты</h2>
+      </div>
+      <div class="cd-mail-row">
+        <a id="cd-mail" href="#" class="cd-mail">&nbsp;</a>
+      </div>
+      <div class="cd-footer">
+        <span class="cd-footer-motto">Свет Среди Холода</span>
+        <span class="cd-footer-copy">© <span id="cd-year"></span> COLDAY</span>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  const MONTHS_RU = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+
+  function formatDate(iso) {
+    if (!iso) return '';
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+    if (!m) return iso;
+    const day = parseInt(m[3], 10);
+    const month = MONTHS_RU[parseInt(m[2], 10) - 1] || '';
+    return day + ' ' + month + ' ' + m[1];
+  }
+
+  function yearOf(iso) {
+    if (!iso) return '';
+    const m = /^(\d{4})/.exec(iso);
+    return m ? m[1] : '';
+  }
+
+  async function fetchReleases() {
+    try {
+      const res = await fetch('/api/releases', { credentials: 'same-origin' });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function makeCover(src) {
+    if (!src) return null;
+    const img = document.createElement('img');
+    img.src = src;
+    img.alt = '';
+    img.loading = 'lazy';
+    return img;
+  }
+
+  function listenPill(href) {
+    const a = document.createElement('a');
+    a.className = 'cd-link-pill';
+    a.href = href;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = 'Слушать';
+    return a;
+  }
+
+  async function renderMusic() {
+    const releases = await fetchReleases();
+    const featuredSlot = document.getElementById('cd-featured-slot');
+    const restSlot = document.getElementById('cd-rest-slot');
+    featuredSlot.innerHTML = '';
+    restSlot.innerHTML = '';
+
+    if (!releases.length) return;
+    const featured = releases.find(r => r.featured) || releases[0];
+    const rest = releases.filter(r => r !== featured);
+
+    const ctaLabel = document.getElementById('cd-hero-cta-label');
+    if (ctaLabel && featured && featured.title) {
+      const tail = featured.release_type ? ' ' + featured.release_type : '';
+      ctaLabel.textContent = 'Новинка — «' + featured.title + '»' + tail;
+    }
+
+    if (featured) {
+      const wrap = document.createElement('div');
+      wrap.className = 'cd-featured';
+
+      const cover = document.createElement('div');
+      cover.className = 'cd-cover';
+      const coverImg = makeCover(featured.cover);
+      if (coverImg) cover.appendChild(coverImg);
+
+      const info = document.createElement('div');
+
+      const meta = document.createElement('div');
+      meta.className = 'cd-featured-meta';
+      const metaParts = ['Новый релиз'];
+      if (featured.release_type) metaParts.push(featured.release_type);
+      const fdate = formatDate(featured.original_date);
+      if (fdate) metaParts.push(fdate);
+      meta.textContent = metaParts.join(' — ');
+      info.appendChild(meta);
+
+      const title = document.createElement('h3');
+      title.className = 'cd-featured-title';
+      title.textContent = featured.title || '';
+      info.appendChild(title);
+
+      if (featured.bandlink && String(featured.bandlink).trim()) {
+        const links = document.createElement('div');
+        links.className = 'cd-featured-links';
+        links.appendChild(listenPill(String(featured.bandlink).trim()));
+        info.appendChild(links);
+      }
+
+      wrap.appendChild(cover);
+      wrap.appendChild(info);
+      featuredSlot.appendChild(wrap);
+    }
+
+    rest.forEach(r => {
+      const item = document.createElement('div');
+      item.className = 'cd-rest-item';
+
+      const cover = document.createElement('div');
+      cover.className = 'cd-rest-cover';
+      const coverImg = makeCover(r.cover);
+      if (coverImg) cover.appendChild(coverImg);
+
+      const body = document.createElement('div');
+
+      const meta = document.createElement('div');
+      meta.className = 'cd-rest-meta';
+      const parts = [];
+      if (r.release_type) parts.push(r.release_type);
+      const y = yearOf(r.original_date);
+      if (y) parts.push(y);
+      meta.textContent = parts.join(' · ');
+      body.appendChild(meta);
+
+      const title = document.createElement('h4');
+      title.className = 'cd-rest-title';
+      title.textContent = r.title || '';
+      body.appendChild(title);
+
+      if (r.bandlink && String(r.bandlink).trim()) {
+        const links = document.createElement('div');
+        links.style.marginTop = '12px';
+        links.appendChild(listenPill(String(r.bandlink).trim()));
+        body.appendChild(links);
+      }
+
+      item.appendChild(cover);
+      item.appendChild(body);
+      restSlot.appendChild(item);
+    });
+  }
+
+  // ---- Email (anti-scrape) + year ----
+  function setupMail() {
+    const mail = document.getElementById('cd-mail');
+    if (!mail) return;
+    const addr = 'deadplugbooking' + '@' + 'gmail.com';
+    mail.textContent = addr;
+    mail.href = 'mailto:' + addr;
+  }
+  function setupYear() {
+    const y = document.getElementById('cd-year');
+    if (y) y.textContent = new Date().getFullYear();
+  }
+
+  // ---- Intro dismissal ----
+  function setupIntro() {
+    const intro = document.getElementById('cd-intro');
+    if (!intro) return;
+    setTimeout(() => { intro.style.display = 'none'; }, 3900);
+  }
+
+  // ---- Black hole canvas ----
+  function setupCanvas() {
+    const canvas = document.getElementById('cd-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const DPR = Math.min(window.devicePixelRatio || 1, 2);
+    const TILT = 0.52;
+    const N = 1700;
+    let w = 0, h = 0, cx = 0, cy = 0, hz = 0;
+    const particles = [];
+
+    const maxR = () => Math.hypot(w, h) * 0.62;
+
+    function spawn(p, edge) {
+      const mr = maxR();
+      p.r = edge ? mr * (0.55 + Math.random() * 0.5) : Math.pow(Math.random(), 0.7) * mr;
+      p.a = Math.random() * Math.PI * 2;
+      p.z = 0.35 + Math.random() * 0.65;
+      p.size = 0.5 + Math.random() * 1.7;
+      p.tw = Math.random() * Math.PI * 2;
+      p.tws = 0.6 + Math.random() * 1.6;
+    }
+
+    for (let i = 0; i < N; i++) { const p = {}; spawn(p, false); particles.push(p); }
+
+    function resize() {
+      w = canvas.clientWidth;
+      h = canvas.clientHeight;
+      if (!w || !h) return;
+      canvas.width = Math.floor(w * DPR);
+      canvas.height = Math.floor(h * DPR);
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      cx = w * 0.5;
+      cy = h * 0.45;
+      hz = Math.min(w, h) * 0.075;
+      ctx.fillStyle = '#05070c';
+      ctx.fillRect(0, 0, w, h);
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    let t = 0;
+    function draw() {
+      requestAnimationFrame(draw);
+      if (!w || !h) return;
+      t += 0.016;
+
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = 'rgba(5,7,12,0.16)';
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.globalCompositeOperation = 'lighter';
+
+      const glow = ctx.createRadialGradient(cx, cy, hz * 0.4, cx, cy, hz * 7);
+      glow.addColorStop(0,   'rgba(64,128,170,0.072)');
+      glow.addColorStop(0.4, 'rgba(40,90,130,0.026)');
+      glow.addColorStop(1,   'rgba(40,90,130,0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(cx, cy, hz * 7, 0, Math.PI * 2);
+      ctx.fill();
+
+      for (const p of particles) {
+        const omega = (0.5 + 90 / (p.r + 60)) * p.z * 0.0055;
+        p.a += omega;
+        p.r -= (0.08 + (hz * 5) / (p.r + 50)) * (0.4 + p.z * 0.7);
+        if (p.r < hz * 1.06) { spawn(p, true); continue; }
+
+        const x = cx + Math.cos(p.a) * p.r;
+        const y = cy + Math.sin(p.a) * p.r * TILT;
+
+        const prox = Math.min(1, Math.max(0, (maxR() - p.r) / (maxR() - hz)));
+        const heat = Math.pow(prox, 2.2);
+        const tw = 0.55 + 0.45 * Math.sin(t * p.tws + p.tw);
+        const alpha = Math.min(1, (0.08 + heat * 0.38) * p.z * tw);
+
+        const r = Math.round(44 + heat * 116);
+        const g = Math.round(80 + heat * 108);
+        const b = Math.round(118 + heat * 96);
+        const sz = p.size * (0.7 + heat * 1.1);
+
+        ctx.fillStyle = 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+        ctx.beginPath();
+        ctx.arc(x, y, sz, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.globalCompositeOperation = 'source-over';
+      const eh = ctx.createRadialGradient(cx, cy, hz * 0.2, cx, cy, hz * 1.15);
+      eh.addColorStop(0,    '#020306');
+      eh.addColorStop(0.82, '#020306');
+      eh.addColorStop(1,    'rgba(2,3,6,0)');
+      ctx.fillStyle = eh;
+      ctx.beginPath();
+      ctx.arc(cx, cy, hz * 1.15, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.save();
+      ctx.shadowBlur = 16;
+      ctx.shadowColor = 'rgba(92,142,180,0.45)';
+      ctx.strokeStyle = 'rgba(116,158,190,0.38)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(cx, cy, hz * 1.04, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.shadowBlur = 6;
+      ctx.lineWidth = 0.8;
+      ctx.strokeStyle = 'rgba(164,194,216,0.24)';
+      ctx.beginPath();
+      ctx.arc(cx, cy, hz * 1.0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    draw();
+  }
+
+  // ---- Live refresh ----
+  function setupRefresh() {
+    window.addEventListener('focus', renderMusic);
+  }
+
+  // ---- Boot ----
+  setupYear();
+  setupMail();
+  setupIntro();
+  renderMusic();
+  setupRefresh();
+  setupCanvas();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>COLDAY · Админ-панель</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Underdog&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #05070c;
+    color: #e9eff6;
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: rgba(116, 215, 255, 0.25); }
+  input::placeholder, textarea::placeholder { color: #5a6878; }
+  button { font: inherit; }
+
+  /* Lock screen */
+  .lock {
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+    background: radial-gradient(120% 100% at 50% 40%, #0a1120 0%, #03050b 70%);
+  }
+  .lock-box { width: 100%; max-width: 380px; text-align: center; }
+  .lock-brand { font-family: 'Underdog', cursive; font-size: 46px; letter-spacing: 0.06em; color: #f4f8ff; }
+  .lock-sub {
+    font-family: 'Space Mono', monospace; font-size: 12px;
+    letter-spacing: 0.3em; text-transform: uppercase;
+    color: #74d7ff; margin-top: 6px;
+  }
+  .lock-input {
+    margin-top: 34px; width: 100%; padding: 15px 18px;
+    background: rgba(116, 215, 255, 0.05);
+    border: 1px solid rgba(116, 215, 255, 0.22);
+    border-radius: 10px; color: #eef4fc;
+    font-family: 'Space Mono', monospace; font-size: 15px;
+    letter-spacing: 0.1em; text-align: center; outline: none;
+  }
+  .lock-err {
+    min-height: 20px; margin-top: 12px;
+    font-family: 'Space Mono', monospace; font-size: 12px;
+    color: #ff7a85; letter-spacing: 0.06em;
+  }
+  .lock-btn {
+    margin-top: 8px; width: 100%; padding: 14px;
+    background: rgba(116, 215, 255, 0.12);
+    border: 1px solid rgba(116, 215, 255, 0.4);
+    border-radius: 100px; color: #dff0fb;
+    font-family: 'Space Mono', monospace; font-size: 12.5px;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    cursor: pointer; transition: background 0.15s;
+  }
+  .lock-btn:hover { background: rgba(116, 215, 255, 0.22); }
+  .lock-btn:disabled { opacity: 0.5; cursor: progress; }
+
+  /* App shell */
+  .shell { max-width: 1180px; margin: 0 auto; padding: 0 28px 100px; }
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 26px 0 30px;
+    border-bottom: 1px solid rgba(116, 215, 255, 0.12);
+    margin-bottom: 44px; flex-wrap: wrap; gap: 14px;
+  }
+  .topbar-left { display: flex; align-items: baseline; gap: 16px; }
+  .topbar-brand { font-family: 'Underdog', cursive; font-size: 30px; letter-spacing: 0.05em; color: #f4f8ff; }
+  .topbar-tag {
+    font-family: 'Space Mono', monospace; font-size: 11px;
+    letter-spacing: 0.26em; text-transform: uppercase; color: #74d7ff;
+  }
+  .topbar-actions { display: flex; gap: 10px; }
+  .topbar-link {
+    font-family: 'Space Mono', monospace; font-size: 11.5px;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: #8a98a8; text-decoration: none;
+    border: 1px solid rgba(116, 215, 255, 0.22);
+    padding: 10px 18px; border-radius: 100px;
+    background: none; cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .topbar-link:hover { color: #74d7ff; border-color: rgba(116, 215, 255, 0.5); }
+
+  /* Grid */
+  .grid {
+    display: grid;
+    grid-template-columns: minmax(0, 460px) 1fr;
+    gap: 54px;
+    align-items: start;
+  }
+  @media (max-width: 920px) {
+    .grid { grid-template-columns: 1fr; gap: 36px; }
+    .form-card { position: static !important; }
+  }
+
+  /* Form */
+  .form-card {
+    position: sticky; top: 24px;
+    background: rgba(9, 14, 23, 0.7);
+    border: 1px solid rgba(116, 215, 255, 0.14);
+    border-radius: 16px; padding: 28px;
+  }
+  .form-title {
+    margin: 0 0 22px; font-family: 'Underdog', cursive;
+    font-size: 30px; font-weight: 400; letter-spacing: 0.02em; color: #eef4fc;
+  }
+  .label {
+    display: block; font-family: 'Space Mono', monospace;
+    font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase;
+    color: #74d7ff; margin-bottom: 10px;
+  }
+  .label-spaced { margin: 22px 0 10px; }
+
+  .cover-slot {
+    display: flex; align-items: center; justify-content: center;
+    gap: 12px; aspect-ratio: 1 / 1;
+    width: 100%; max-width: 200px;
+    border: 1px dashed rgba(116, 215, 255, 0.3);
+    border-radius: 10px; overflow: hidden;
+    cursor: pointer; background: rgba(116, 215, 255, 0.03);
+    position: relative; transition: border-color 0.15s;
+  }
+  .cover-slot:hover { border-color: rgba(116, 215, 255, 0.6); }
+  .cover-slot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .cover-slot input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .cover-placeholder {
+    font-family: 'Space Mono', monospace; font-size: 11px;
+    letter-spacing: 0.14em; text-transform: uppercase; color: #6c7a8a;
+    text-align: center; padding: 0 8px;
+  }
+  .cover-or {
+    display: block; margin: 12px 0 6px;
+    font-family: 'Space Mono', monospace; font-size: 10.5px;
+    letter-spacing: 0.18em; text-transform: uppercase; color: #6c7a8a;
+  }
+
+  .text-input, .textarea, .mono-input, .select, .link-input {
+    width: 100%; padding: 13px 15px;
+    background: rgba(116, 215, 255, 0.05);
+    border: 1px solid rgba(116, 215, 255, 0.2);
+    border-radius: 9px; color: #eef4fc;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 16px; outline: none;
+  }
+  .textarea { font-size: 15px; line-height: 1.5; resize: vertical; }
+  .mono-input, .select { font-family: 'Space Mono', monospace; font-size: 14px; }
+  .link-input { font-family: 'Space Mono', monospace; font-size: 12.5px; padding: 11px 14px;
+    background: rgba(116, 215, 255, 0.04); border-color: rgba(116, 215, 255, 0.16); border-radius: 8px; }
+  .select option { background: #0a1120; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+
+  .featured-row {
+    display: flex; align-items: center; gap: 12px;
+    margin-top: 20px; cursor: pointer; user-select: none;
+  }
+  .featured-row input { width: 18px; height: 18px; accent-color: #74d7ff; cursor: pointer; }
+  .featured-row span {
+    font-family: 'Space Mono', monospace; font-size: 12px;
+    letter-spacing: 0.12em; text-transform: uppercase; color: #c4d3e3;
+  }
+
+  .form-err {
+    min-height: 18px; margin-top: 16px;
+    font-family: 'Space Mono', monospace; font-size: 12px;
+    color: #ff7a85; letter-spacing: 0.04em;
+  }
+
+  .form-actions { display: flex; gap: 12px; margin-top: 8px; }
+  .btn-primary {
+    flex: 1; padding: 15px;
+    background: rgba(116, 215, 255, 0.16);
+    border: 1px solid rgba(116, 215, 255, 0.45);
+    border-radius: 100px; color: #eef9ff;
+    font-family: 'Space Mono', monospace; font-size: 12px;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    cursor: pointer; transition: background 0.15s;
+  }
+  .btn-primary:hover { background: rgba(116, 215, 255, 0.28); }
+  .btn-primary:disabled { opacity: 0.5; cursor: progress; }
+  .btn-ghost {
+    padding: 15px 20px;
+    background: transparent;
+    border: 1px solid rgba(116, 215, 255, 0.2);
+    border-radius: 100px; color: #8a98a8;
+    font-family: 'Space Mono', monospace; font-size: 12px;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    cursor: pointer; transition: color 0.15s, border-color 0.15s;
+  }
+  .btn-ghost:hover { color: #d7e4f2; border-color: rgba(116, 215, 255, 0.4); }
+
+  /* List */
+  .list-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 22px;
+  }
+  .list-title {
+    margin: 0; font-family: 'Underdog', cursive;
+    font-size: 30px; font-weight: 400; letter-spacing: 0.02em; color: #eef4fc;
+  }
+  .list-count {
+    font-family: 'Space Mono', monospace; font-size: 12px;
+    letter-spacing: 0.14em; color: #6c7a8a;
+  }
+  .empty {
+    padding: 60px 24px; text-align: center;
+    border: 1px dashed rgba(116, 215, 255, 0.2);
+    border-radius: 14px; color: #6c7a8a;
+    font-family: 'Space Mono', monospace; font-size: 13px;
+    letter-spacing: 0.1em;
+  }
+  .list { display: flex; flex-direction: column; gap: 14px; }
+  .release {
+    display: flex; gap: 18px; align-items: center;
+    background: rgba(9, 14, 23, 0.6);
+    border: 1px solid rgba(116, 215, 255, 0.12);
+    border-radius: 12px; padding: 14px;
+  }
+  .release-cover {
+    position: relative; width: 78px; height: 78px;
+    flex: 0 0 auto; border-radius: 8px; overflow: hidden;
+    background: rgba(116, 215, 255, 0.06);
+    border: 1px solid rgba(116, 215, 255, 0.14);
+  }
+  .release-cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .release-body { flex: 1 1 auto; min-width: 0; }
+  .release-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .release-title { font-family: 'Underdog', cursive; font-size: 22px; line-height: 1.15; color: #eef4fc; }
+  .release-badge {
+    font-family: 'Space Mono', monospace; font-size: 9.5px;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: #05070c; background: #74d7ff;
+    padding: 3px 8px; border-radius: 100px;
+  }
+  .release-meta {
+    font-family: 'Space Mono', monospace; font-size: 11.5px;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: #74d7ff; margin-top: 5px;
+  }
+  .release-links {
+    font-family: 'Space Mono', monospace; font-size: 11px;
+    letter-spacing: 0.08em; color: #6c7a8a;
+    margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .release-actions { display: flex; flex-direction: column; gap: 7px; flex: 0 0 auto; }
+  .btn-edit {
+    padding: 8px 14px;
+    background: rgba(116, 215, 255, 0.1);
+    border: 1px solid rgba(116, 215, 255, 0.28);
+    border-radius: 8px; color: #d7e4f2;
+    font-family: 'Space Mono', monospace; font-size: 10.5px;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    cursor: pointer; transition: background 0.15s;
+  }
+  .btn-edit:hover { background: rgba(116, 215, 255, 0.2); }
+  .btn-delete {
+    padding: 8px 14px;
+    background: transparent;
+    border: 1px solid rgba(255, 122, 133, 0.3);
+    border-radius: 8px; color: #ff95a0;
+    font-family: 'Space Mono', monospace; font-size: 10.5px;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    cursor: pointer; transition: background 0.15s;
+  }
+  .btn-delete:hover { background: rgba(255, 122, 133, 0.14); }
+
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: rgba(9, 14, 23, 0.95);
+    border: 1px solid rgba(116, 215, 255, 0.3);
+    color: #eef4fc; padding: 12px 18px;
+    border-radius: 10px;
+    font-family: 'Space Mono', monospace; font-size: 12px;
+    letter-spacing: 0.1em; z-index: 100;
+    opacity: 0; transform: translateY(10px);
+    transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.err { border-color: rgba(255, 122, 133, 0.5); color: #ff95a0; }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div id="lock-view" class="lock">
+  <div class="lock-box">
+    <div class="lock-brand">COLDAY</div>
+    <div class="lock-sub">Админ-панель</div>
+    <input id="lock-pass" type="password" class="lock-input" placeholder="код доступа" autocomplete="current-password">
+    <div id="lock-err" class="lock-err"></div>
+    <button id="lock-btn" class="lock-btn">Войти</button>
+  </div>
+</div>
+
+<div id="app-view" class="shell hidden">
+  <div class="topbar">
+    <div class="topbar-left">
+      <span class="topbar-brand">COLDAY</span>
+      <span class="topbar-tag">Релизы · Админ</span>
+    </div>
+    <div class="topbar-actions">
+      <a href="/" class="topbar-link">← На сайт</a>
+      <button id="logout-btn" class="topbar-link" type="button">Выйти</button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <!-- FORM -->
+    <div class="form-card">
+      <h2 id="form-title" class="form-title">Новый релиз</h2>
+
+      <label class="label">Обложка</label>
+      <label class="cover-slot">
+        <img id="draft-cover-img" alt="" hidden>
+        <span id="draft-cover-placeholder" class="cover-placeholder">+ загрузить</span>
+        <input id="draft-cover-file" type="file" accept="image/*">
+      </label>
+      <span class="cover-or">или вставить URL</span>
+      <input id="draft-cover-url" type="url" class="link-input" placeholder="https://… (CDN, S3, band.link)">
+
+      <label class="label label-spaced">Название</label>
+      <input id="draft-title" type="text" class="text-input" placeholder="Slow Collapse">
+
+      <div class="two-col">
+        <div>
+          <label class="label label-spaced">Тип</label>
+          <select id="draft-type" class="select">
+            <option value="Single">Single</option>
+            <option value="Double-Single">Double-Single</option>
+            <option value="EP">EP</option>
+            <option value="Album">Album</option>
+            <option value="Mixtape">Mixtape</option>
+          </select>
+        </div>
+        <div>
+          <label class="label label-spaced">Дата релиза</label>
+          <input id="draft-date" type="date" class="mono-input">
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div>
+          <label class="label label-spaced">Треков</label>
+          <input id="draft-songs" type="number" min="0" class="mono-input" placeholder="1">
+        </div>
+        <div>
+          <label class="label label-spaced">Длительность</label>
+          <input id="draft-duration" type="time" step="1" class="mono-input" placeholder="00:02:45">
+        </div>
+      </div>
+
+      <label class="label label-spaced">UPC</label>
+      <input id="draft-upc" type="text" class="mono-input" placeholder="5063…">
+
+      <label class="label label-spaced">Bandlink</label>
+      <input id="draft-bandlink" type="url" class="link-input" placeholder="https://band.link/…">
+
+      <label class="featured-row">
+        <input id="draft-featured" type="checkbox">
+        <span>Главный релиз (крупно)</span>
+      </label>
+
+      <div id="form-err" class="form-err"></div>
+
+      <div class="form-actions">
+        <button id="submit-btn" class="btn-primary">Добавить</button>
+        <button id="reset-btn" class="btn-ghost">Очистить</button>
+      </div>
+    </div>
+
+    <!-- LIST -->
+    <div>
+      <div class="list-head">
+        <h2 class="list-title">Релизы</h2>
+        <span id="list-count" class="list-count">0 релизов</span>
+      </div>
+      <div id="empty" class="empty">Пока нет релизов — добавьте первый слева.</div>
+      <div id="list" class="list"></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  const $ = (id) => document.getElementById(id);
+
+  function blank() {
+    const today = new Date();
+    const iso = today.toISOString().slice(0, 10);
+    return {
+      id: 0,
+      title: '',
+      release_type: 'Single',
+      cover: '',
+      bandlink: '',
+      upc: '',
+      original_date: iso,
+      counter_songs: 1,
+      song_duration: '',
+      featured: false
+    };
+  }
+
+  function pluralize(n) {
+    if (n === 1) return ' релиз';
+    if (n >= 2 && n <= 4) return ' релиза';
+    return ' релизов';
+  }
+
+  function showToast(msg, isErr) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.classList.toggle('err', !!isErr);
+    t.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => t.classList.remove('show'), 2400);
+  }
+
+  const state = {
+    releases: [],
+    draft: blank(),
+    editingId: null
+  };
+
+  // ---- API ----
+  async function api(method, path, body, opts) {
+    const init = {
+      method,
+      credentials: 'same-origin',
+      headers: {}
+    };
+    if (body !== undefined) {
+      init.headers['Content-Type'] = 'application/json';
+      init.body = JSON.stringify(body);
+    }
+    const res = await fetch(path, init);
+    if (res.status === 401) {
+      if (!(opts && opts.allow401)) {
+        showLock();
+        throw new Error('unauthorized');
+      }
+    }
+    const text = await res.text();
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch (e) {}
+    if (!res.ok) {
+      const msg = (data && data.error) || res.statusText || 'Ошибка';
+      throw new Error(msg);
+    }
+    return data;
+  }
+
+  // ---- Auth ----
+  async function tryUnlock() {
+    const btn = $('lock-btn');
+    btn.disabled = true;
+    $('lock-err').textContent = '';
+    try {
+      await api('POST', '/api/login', { password: $('lock-pass').value }, { allow401: true });
+      $('lock-pass').value = '';
+      await showApp();
+    } catch (e) {
+      $('lock-err').textContent = e.message || 'Неверный код';
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function logout() {
+    try { await api('POST', '/api/logout'); } catch (e) {}
+    showLock();
+  }
+
+  function showLock() {
+    $('lock-view').classList.remove('hidden');
+    $('app-view').classList.add('hidden');
+    setTimeout(() => $('lock-pass').focus(), 30);
+  }
+
+  async function showApp() {
+    $('lock-view').classList.add('hidden');
+    $('app-view').classList.remove('hidden');
+    state.draft = blank();
+    state.editingId = null;
+    syncDraftToForm();
+    await loadReleases();
+  }
+
+  async function loadReleases() {
+    try {
+      const data = await api('GET', '/api/releases');
+      state.releases = Array.isArray(data) ? data : [];
+    } catch (e) {
+      state.releases = [];
+      showToast('Не удалось загрузить релизы', true);
+    }
+    renderList();
+  }
+
+  // ---- Form ----
+  function syncDraftToForm() {
+    const d = state.draft;
+    $('draft-title').value = d.title || '';
+    $('draft-type').value = d.release_type || 'Single';
+    $('draft-date').value = (d.original_date || '').slice(0, 10);
+    $('draft-songs').value = d.counter_songs != null ? d.counter_songs : '';
+    $('draft-duration').value = d.song_duration || '';
+    $('draft-upc').value = d.upc || '';
+    $('draft-bandlink').value = d.bandlink || '';
+    $('draft-cover-url').value = d.cover || '';
+    $('draft-featured').checked = !!d.featured;
+    setCoverPreview(d.cover);
+    $('form-title').textContent = state.editingId ? 'Редактировать релиз' : 'Новый релиз';
+    $('submit-btn').textContent = state.editingId ? 'Сохранить' : 'Добавить';
+    $('reset-btn').textContent = state.editingId ? 'Отмена' : 'Очистить';
+    $('form-err').textContent = '';
+  }
+
+  function setCoverPreview(src) {
+    const img = $('draft-cover-img');
+    const ph = $('draft-cover-placeholder');
+    if (src) {
+      img.src = src;
+      img.hidden = false;
+      ph.hidden = true;
+    } else {
+      img.removeAttribute('src');
+      img.hidden = true;
+      ph.hidden = false;
+    }
+  }
+
+  async function onCoverPick(e) {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    const fd = new FormData();
+    fd.append('file', f);
+    try {
+      const res = await fetch('/api/upload-cover', { method: 'POST', body: fd, credentials: 'same-origin' });
+      if (res.status === 401) { showLock(); return; }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'upload failed');
+      state.draft.cover = data.url;
+      $('draft-cover-url').value = data.url;
+      setCoverPreview(data.url);
+      showToast('Обложка загружена');
+    } catch (err) {
+      showToast('Не удалось загрузить обложку', true);
+    } finally {
+      e.target.value = '';
+    }
+  }
+
+  function onCoverUrl() {
+    const v = $('draft-cover-url').value.trim();
+    state.draft.cover = v;
+    setCoverPreview(v);
+  }
+
+  function readDraftFromForm() {
+    state.draft.title = $('draft-title').value.trim();
+    state.draft.release_type = $('draft-type').value;
+    state.draft.original_date = $('draft-date').value;
+    state.draft.counter_songs = parseInt($('draft-songs').value, 10) || 0;
+    state.draft.song_duration = $('draft-duration').value;
+    state.draft.upc = $('draft-upc').value.trim();
+    state.draft.bandlink = $('draft-bandlink').value.trim();
+    state.draft.cover = $('draft-cover-url').value.trim();
+    state.draft.featured = $('draft-featured').checked;
+  }
+
+  async function submit() {
+    readDraftFromForm();
+    const d = state.draft;
+    if (!d.title) {
+      $('form-err').textContent = 'Укажите название релиза';
+      return;
+    }
+    const btn = $('submit-btn');
+    btn.disabled = true;
+    try {
+      const payload = {
+        title: d.title,
+        release_type: d.release_type,
+        cover: d.cover,
+        bandlink: d.bandlink,
+        upc: d.upc,
+        original_date: d.original_date,
+        counter_songs: d.counter_songs,
+        song_duration: d.song_duration,
+        featured: d.featured
+      };
+      if (state.editingId) {
+        await api('PUT', '/api/releases/' + state.editingId, payload);
+        showToast('Сохранено');
+      } else {
+        await api('POST', '/api/releases', payload);
+        showToast('Релиз добавлен');
+      }
+      state.draft = blank();
+      state.editingId = null;
+      syncDraftToForm();
+      await loadReleases();
+    } catch (e) {
+      $('form-err').textContent = e.message || 'Ошибка сохранения';
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function edit(id) {
+    const r = state.releases.find(x => String(x.id) === String(id));
+    if (!r) return;
+    state.draft = Object.assign(blank(), r);
+    state.editingId = r.id;
+    syncDraftToForm();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  async function remove(id) {
+    if (!window.confirm('Удалить релиз?')) return;
+    try {
+      await api('DELETE', '/api/releases/' + id);
+      if (String(state.editingId) === String(id)) {
+        state.draft = blank();
+        state.editingId = null;
+        syncDraftToForm();
+      }
+      await loadReleases();
+      showToast('Удалено');
+    } catch (e) {
+      showToast(e.message || 'Не удалось удалить', true);
+    }
+  }
+
+  function resetForm() {
+    state.draft = blank();
+    state.editingId = null;
+    syncDraftToForm();
+  }
+
+  // ---- List ----
+  function renderList() {
+    const list = $('list');
+    const empty = $('empty');
+    const count = state.releases.length;
+    $('list-count').textContent = count + pluralize(count);
+    list.innerHTML = '';
+    if (count === 0) {
+      empty.style.display = '';
+      return;
+    }
+    empty.style.display = 'none';
+    const frag = document.createDocumentFragment();
+    state.releases.forEach(r => frag.appendChild(renderRelease(r)));
+    list.appendChild(frag);
+  }
+
+  function renderRelease(r) {
+    const row = document.createElement('div');
+    row.className = 'release';
+
+    const cover = document.createElement('div');
+    cover.className = 'release-cover';
+    if (r.cover) {
+      const img = document.createElement('img');
+      img.src = r.cover; img.alt = ''; img.loading = 'lazy';
+      cover.appendChild(img);
+    }
+
+    const body = document.createElement('div');
+    body.className = 'release-body';
+
+    const line = document.createElement('div');
+    line.className = 'release-line';
+    const titleEl = document.createElement('span');
+    titleEl.className = 'release-title';
+    titleEl.textContent = r.title;
+    line.appendChild(titleEl);
+    if (r.featured) {
+      const badge = document.createElement('span');
+      badge.className = 'release-badge';
+      badge.textContent = 'Главный';
+      line.appendChild(badge);
+    }
+    body.appendChild(line);
+
+    const meta = document.createElement('div');
+    meta.className = 'release-meta';
+    const parts = [];
+    if (r.release_type) parts.push(r.release_type);
+    if (r.original_date) parts.push(r.original_date);
+    if (r.counter_songs) parts.push(r.counter_songs + ' тр.');
+    if (r.song_duration) parts.push(r.song_duration);
+    meta.textContent = parts.join(' · ');
+    body.appendChild(meta);
+
+    const linkSummary = document.createElement('div');
+    linkSummary.className = 'release-links';
+    linkSummary.textContent = r.bandlink ? r.bandlink : 'нет ссылки';
+    body.appendChild(linkSummary);
+
+    const actions = document.createElement('div');
+    actions.className = 'release-actions';
+    const editBtn = document.createElement('button');
+    editBtn.className = 'btn-edit'; editBtn.textContent = 'Ред.';
+    editBtn.addEventListener('click', () => edit(r.id));
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn-delete'; delBtn.textContent = 'Удал.';
+    delBtn.addEventListener('click', () => remove(r.id));
+    actions.appendChild(editBtn);
+    actions.appendChild(delBtn);
+
+    row.appendChild(cover);
+    row.appendChild(body);
+    row.appendChild(actions);
+    return row;
+  }
+
+  // ---- Wire up ----
+  $('lock-btn').addEventListener('click', tryUnlock);
+  $('lock-pass').addEventListener('keydown', (e) => { if (e.key === 'Enter') tryUnlock(); });
+  $('lock-pass').addEventListener('input', () => { $('lock-err').textContent = ''; });
+  $('logout-btn').addEventListener('click', logout);
+
+  $('draft-cover-file').addEventListener('change', onCoverPick);
+  $('draft-cover-url').addEventListener('input', onCoverUrl);
+  $('submit-btn').addEventListener('click', submit);
+  $('reset-btn').addEventListener('click', resetForm);
+
+  // ---- Boot ----
+  (async function boot() {
+    try {
+      const me = await api('GET', '/api/me', undefined, { allow401: true });
+      if (me && me.authed) {
+        await showApp();
+      } else {
+        showLock();
+      }
+    } catch (e) {
+      showLock();
+    }
+  })();
+})();
+</script>
+</body>
+</html>
