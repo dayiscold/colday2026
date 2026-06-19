@@ -2,8 +2,10 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>COLDAY · Свет Среди Холода</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="alternate icon" href="/favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Underdog&display=swap" rel="stylesheet">
@@ -275,6 +277,113 @@
     .cd-featured { grid-template-columns: 1fr; }
     .cd-rest { grid-template-columns: 1fr !important; }
   }
+
+  /* Tablet */
+  @media (max-width: 1024px) {
+    nav.cd-nav { padding: 20px 28px; }
+    .cd-music { padding: 110px 28px 100px; }
+    .cd-contacts { padding: 110px 28px 80px; }
+    .cd-music-head { margin-bottom: 48px; }
+    .cd-featured { gap: 40px; }
+    .cd-rest { gap: 28px; margin-top: 48px; }
+  }
+
+  /* Small tablet / large phone */
+  @media (max-width: 720px) {
+    nav.cd-nav { padding: 14px 18px; }
+    .cd-nav-brand { font-size: 21px; letter-spacing: 0.18em; padding-left: 0.18em; }
+    .cd-nav-links { gap: 16px; }
+    .cd-nav-link { font-size: 11px; letter-spacing: 0.14em; }
+    .cd-nav-tg {
+      padding: 7px 13px 7px 10px;
+      font-size: 10.5px;
+      letter-spacing: 0.12em;
+      gap: 7px;
+    }
+    .cd-nav-tg svg { width: 16px; height: 16px; }
+
+    .cd-hero { padding: 100px 18px 80px; }
+    .cd-hero p { font-size: 16px; letter-spacing: 0.12em; margin-top: 22px; }
+    .cd-hero-cta {
+      margin-top: 30px;
+      padding: 12px 20px;
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      max-width: calc(100% - 20px);
+      text-align: center;
+    }
+    .cd-scroll-hint { bottom: 18px; font-size: 10px; letter-spacing: 0.24em; }
+    .cd-scroll-hint span { height: 20px; }
+
+    .cd-music { padding: 80px 20px 80px; }
+    .cd-music-head { margin-bottom: 36px; }
+    .cd-featured { gap: 28px; padding-bottom: 48px; }
+    .cd-featured-desc { font-size: 15px; line-height: 1.6; }
+    .cd-featured-links { margin-top: 22px; }
+    .cd-rest { margin-top: 40px; gap: 22px; }
+    .cd-rest-item { gap: 18px; }
+    .cd-rest-cover { width: 108px; height: 108px; }
+    .cd-rest-title { font-size: 24px; }
+    .cd-rest-meta { font-size: 10.5px; letter-spacing: 0.2em; }
+    .cd-rest-desc { font-size: 13px; }
+
+    .cd-contacts { padding: 80px 20px 60px; }
+    .cd-contacts-head { margin-bottom: 40px; }
+    .cd-footer { margin-top: 60px; }
+  }
+
+  /* Phone */
+  @media (max-width: 460px) {
+    nav.cd-nav { padding: 12px 14px; }
+    .cd-nav-brand { font-size: 19px; letter-spacing: 0.16em; padding-left: 0.16em; }
+    .cd-nav-links { gap: 10px; }
+    .cd-nav-link { display: none; }
+    .cd-nav-tg-label { display: none; }
+    .cd-nav-tg {
+      padding: 8px;
+      border-radius: 50%;
+      gap: 0;
+    }
+    .cd-nav-tg svg { width: 18px; height: 18px; }
+
+    .cd-hero { padding: 86px 14px 70px; }
+    .cd-hero p { font-size: 14.5px; margin-top: 18px; padding: 0 8px; }
+    .cd-hero-cta { padding: 11px 18px; font-size: 10.5px; }
+
+    .cd-music { padding: 60px 16px 70px; }
+    .cd-music-head { margin-bottom: 28px; }
+    .cd-featured { gap: 22px; padding-bottom: 40px; }
+    .cd-rest { margin-top: 32px; gap: 20px; }
+    .cd-rest-item {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 14px;
+    }
+    .cd-rest-cover {
+      width: 100%;
+      max-width: 260px;
+      height: auto;
+      aspect-ratio: 1 / 1;
+    }
+    .cd-rest-title { font-size: 22px; }
+
+    .cd-contacts { padding: 60px 16px 50px; }
+    .cd-contacts-head { margin-bottom: 32px; }
+    .cd-mail { word-break: break-all; }
+    .cd-footer {
+      margin-top: 48px;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 14px;
+    }
+  }
+
+  /* Short-height phones: prevent intro disc from clipping */
+  @media (max-height: 620px) {
+    .cd-intro-disc { width: 140px; height: 140px; }
+    .cd-intro-glow { inset: -64px; }
+    #cd-intro { gap: 36px; }
+  }
   .cd-cover {
     position: relative;
     width: 100%;
@@ -456,7 +565,7 @@
           <circle cx="120" cy="120" r="120" fill="url(#tgn)"/>
           <path fill="#ffffff" d="M53.4 118.7c34.9-15.2 58.2-25.2 69.9-30.1 33.3-13.8 40.2-16.3 44.7-16.4 1 0 3.2.2 4.7 1.4 1.2 1 1.5 2.3 1.7 3.3.2 1 .4 3.1.2 4.8-1.8 19.5-9.8 66.9-13.9 88.8-1.7 9.3-5.1 12.4-8.4 12.7-7.1.7-12.5-4.7-19.4-9.2-10.8-7.1-16.9-11.5-27.4-18.4-12.1-8-4.3-12.4 2.7-19.6 1.8-1.9 33.4-30.6 34-33.2.1-.3.1-1.5-.6-2.1-.7-.6-1.7-.4-2.5-.2-1.1.2-17.9 11.4-50.6 33.4-4.8 3.3-9.1 4.9-13 4.8-4.3-.1-12.5-2.4-18.7-4.4-7.5-2.4-13.5-3.7-13-7.9.3-2.2 3.3-4.4 9.1-6.8z"/>
         </svg>
-        Telegram
+        <span class="cd-nav-tg-label">Telegram</span>
       </a>
     </div>
   </nav>

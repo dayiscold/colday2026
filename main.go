@@ -613,6 +613,9 @@ func main() {
 	mux.HandleFunc("/", handleIndex(cfg))
 	mux.HandleFunc("/admin", handleAdmin(cfg))
 	mux.HandleFunc("/admin/", handleAdmin(cfg))
+	mux.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(cfg.staticDir, "favicon.svg"))
+	})
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(cfg.staticDir))))
 
 	mux.HandleFunc("/api/login", handleLogin(cfg))
