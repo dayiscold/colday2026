@@ -318,14 +318,35 @@
     .cd-music { padding: 80px 20px 80px; }
     .cd-music-head { margin-bottom: 36px; }
     .cd-featured { gap: 28px; padding-bottom: 48px; }
+    .cd-featured-title {
+      font-size: clamp(30px, 7.4vw, 46px);
+      line-height: 1.04;
+      letter-spacing: 0.01em;
+    }
     .cd-featured-desc { font-size: 15px; line-height: 1.6; }
     .cd-featured-links { margin-top: 22px; }
     .cd-rest { margin-top: 40px; gap: 22px; }
-    .cd-rest-item { gap: 18px; }
-    .cd-rest-cover { width: 108px; height: 108px; }
-    .cd-rest-title { font-size: 24px; }
-    .cd-rest-meta { font-size: 10.5px; letter-spacing: 0.2em; }
+    .cd-rest-item {
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .cd-rest-cover { width: 96px; height: 96px; }
+    .cd-rest-meta {
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      margin-bottom: 6px;
+    }
+    .cd-rest-title {
+      font-size: 19px;
+      letter-spacing: 0.01em;
+      line-height: 1.1;
+    }
     .cd-rest-desc { font-size: 13px; }
+    .cd-link-pill {
+      font-size: 10.5px;
+      letter-spacing: 0.12em;
+      padding: 9px 16px;
+    }
 
     .cd-contacts { padding: 80px 20px 60px; }
     .cd-contacts-head { margin-bottom: 40px; }
@@ -353,23 +374,29 @@
     .cd-music { padding: 60px 16px 70px; }
     .cd-music-head { margin-bottom: 28px; }
     .cd-featured { gap: 22px; padding-bottom: 40px; }
-    .cd-rest { margin-top: 32px; gap: 20px; }
-    .cd-rest-item {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 14px;
+    .cd-featured-title { font-size: 30px; line-height: 1.04; }
+    .cd-rest { margin-top: 28px; gap: 20px; }
+    .cd-rest-item { gap: 14px; align-items: flex-start; }
+    .cd-rest-cover { width: 84px; height: 84px; }
+    .cd-rest-meta {
+      font-size: 9.5px;
+      letter-spacing: 0.16em;
+      margin-bottom: 5px;
     }
-    .cd-rest-cover {
-      width: 100%;
-      max-width: 260px;
-      height: auto;
-      aspect-ratio: 1 / 1;
+    .cd-rest-title {
+      font-size: 17px;
+      line-height: 1.08;
+      letter-spacing: 0;
     }
-    .cd-rest-title { font-size: 22px; }
+    .cd-link-pill {
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      padding: 8px 14px;
+    }
 
     .cd-contacts { padding: 60px 16px 50px; }
     .cd-contacts-head { margin-bottom: 32px; }
-    .cd-mail { word-break: break-all; }
+    .cd-mail { font-size: 20px; word-break: break-all; }
     .cd-footer {
       margin-top: 48px;
       flex-direction: column;
@@ -485,6 +512,18 @@
     font-size: 14px;
     line-height: 1.5;
     color: #8c98a7;
+  }
+
+  /* Overflow safety: stop long titles from pushing the cover or the grid wider */
+  .cd-rest-item > div + div,
+  .cd-featured > div + div {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  .cd-rest-title,
+  .cd-featured-title {
+    overflow-wrap: break-word;
+    hyphens: auto;
   }
 
   /* Contacts */
