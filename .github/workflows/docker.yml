@@ -70,24 +70,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Deploy via SSH
-        env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USER: ${{ secrets.SSH_USER }}
-          SSH_KEY: ${{ secrets.SSH_KEY }}
-        run: |
-          mkdir -p ~/.ssh
-          echo "$SSH_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
+      - uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          source: deploy/
+          target: /opt/colday_ru/
+          strip_components: 1
 
-          SSH_OPTS="-o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i ~/.ssh/deploy_key"
-
-          scp $SSH_OPTS -r deploy/* "${SSH_USER}@${SSH_HOST}:/opt/colday_ru/"
-
-          ssh $SSH_OPTS "${SSH_USER}@${SSH_HOST}" "
+      - uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
             set -e
             mkdir -p /opt/colday_ru/data /opt/colday_ru/uploads
             cd /opt/colday_ru
             docker compose pull
             docker compose up -d
-          "
