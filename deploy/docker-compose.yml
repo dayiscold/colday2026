@@ -1,0 +1,27 @@
+services:
+  colday_app:
+    image: ghcr.io/dayiscold/colday2026:latest
+    container_name: colday_app
+    restart: unless-stopped
+    networks:
+      - main
+    env_file:
+      - .env
+    volumes:
+      - ./data:/colday_app/data
+      - ./uploads:/colday_app/static/uploads
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    restart: unless-stopped
+    networks:
+      - main
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./templates:/etc/nginx/conf.d:ro
+
+networks:
+  main:

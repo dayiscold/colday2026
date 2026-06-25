@@ -18,7 +18,7 @@ RUN apk add --no-cache ca-certificates tzdata
 WORKDIR /colday_app
 COPY --from=builder /out/colday2026 /colday_app/
 COPY static ./static
-RUN adduser -D gafi && mkdir -p /colday_app/static/uploads \
+RUN adduser -D gafi && mkdir -p /colday_app/static/uploads /colday_app/data \
     && chown -R gafi:gafi /colday_app
 USER gafi
 
