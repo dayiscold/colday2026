@@ -80,9 +80,11 @@ jobs:
           echo "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
 
-          scp -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key -r deploy/* "${SSH_USER}@${SSH_HOST}:/opt/colday_ru/"
+          SSH_OPTS="-o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i ~/.ssh/deploy_key"
 
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" "
+          scp $SSH_OPTS -r deploy/* "${SSH_USER}@${SSH_HOST}:/opt/colday_ru/"
+
+          ssh $SSH_OPTS "${SSH_USER}@${SSH_HOST}" "
             set -e
             mkdir -p /opt/colday_ru/data /opt/colday_ru/uploads
             cd /opt/colday_ru
