@@ -1,0 +1,38 @@
+server {
+  server_name www.colday.ru;
+  client_max_body_size 100M;
+
+  resolver 127.0.0.11 valid=30s;
+
+  location / {
+    proxy_pass http://colday_app:8080;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header X-Forwarded-Proto https;
+    # Optional: Extend timeouts if experiencing issues
+    proxy_read_timeout 300s;
+    proxy_send_timeout 300s;
+  }
+  listen [::]:443 ssl;
+  listen 443 ssl;
+  listen 443 quic;
+  http2 on;
+  ssl_certificate /etc/certs/fullchain.pem;
+  ssl_certificate_key /etc/certs/key.pem;
+  add_header Alt-Svc 'h3=":443"; ma=86400';
+  ssl_session_cache shared:le_nginx_SSL:10m;
+  ssl_session_timeout 1440m;
+  ssl_session_tickets off;
+  ssl_protocols TLSv1.2 TLSv1.3;
+  ssl_prefer_server_ciphers off;
+  ssl_ciphers "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384";
+}
+
+server {
+    if ($host = www.colday.ru) {
+        return 301 https://$host$request_uri;
+    }
+    listen 80;
+    server_name www.colday.ru;
+    return 404;
+}
