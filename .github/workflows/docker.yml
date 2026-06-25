@@ -62,35 +62,3 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${{ steps.semantic.outputs.new_release_version }}
-
-  deploy:
-    needs: [test, release]
-    if: github.ref == 'refs/heads/main' && needs.release.outputs.published == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Deploy
-        env:
-          HOST: ${{ secrets.SSH_HOST }}
-          USER: ${{ secrets.SSH_USER }}
-          KEY: ${{ secrets.SSH_KEY }}
-        run: |
-          set -e
-
-          echo "$KEY" > /tmp/deploy_key
-          chmod 600 /tmp/deploy_key
-
-          tar czf /tmp/deploy.tar.gz -C . deploy
-
-          scp -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i /tmp/deploy_key /tmp/deploy.tar.gz "${USER}@${HOST}:~/"
-
-          ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i /tmp/deploy_key "${USER}@${HOST}" "
-            set -e
-            SUDO='echo | sudo -S'
-            \$SUDO mkdir -p /opt/colday_ru/data /opt/colday_ru/uploads
-            \$SUDO tar xzf ~/deploy.tar.gz -C /opt/colday_ru --strip-components=1
-            cd /opt/colday_ru
-            \$SUDO docker compose pull
-            \$SUDO docker compose up -d
-          "
