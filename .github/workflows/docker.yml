@@ -14,7 +14,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-go@v5
         with:
@@ -34,7 +34,7 @@ jobs:
       version: ${{ steps.semantic.outputs.new_release_version }}
       published: ${{ steps.semantic.outputs.new_release_published }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -68,26 +68,27 @@ jobs:
     if: github.ref == 'refs/heads/main' && needs.release.outputs.published == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_KEY }}
-
-      - run: ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
-
-      - name: Copy deploy folder
+      - name: Deploy
+        env:
+          HOST: ${{ secrets.SSH_HOST }}
+          USER: ${{ secrets.SSH_USER }}
+          KEY: ${{ secrets.SSH_KEY }}
         run: |
-          tar -c -C . deploy | ssh "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" "
+          set -e
+
+          echo "$KEY" > /tmp/deploy_key
+          chmod 600 /tmp/deploy_key
+
+          tar czf /tmp/deploy.tar.gz -C . deploy
+
+          scp -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i /tmp/deploy_key /tmp/deploy.tar.gz "${USER}@${HOST}:~/"
+
+          ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i /tmp/deploy_key "${USER}@${HOST}" "
             set -e
             sudo mkdir -p /opt/colday_ru/data /opt/colday_ru/uploads
-            sudo tar x -C /opt/colday_ru
-          "
-
-      - name: Restart services
-        run: |
-          ssh "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" "
-            set -e
+            sudo tar xzf ~/deploy.tar.gz -C /opt/colday_ru --strip-components=1
             cd /opt/colday_ru
             sudo docker compose pull
             sudo docker compose up -d
