@@ -87,9 +87,10 @@ jobs:
 
           ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i /tmp/deploy_key "${USER}@${HOST}" "
             set -e
-            sudo mkdir -p /opt/colday_ru/data /opt/colday_ru/uploads
-            sudo tar xzf ~/deploy.tar.gz -C /opt/colday_ru --strip-components=1
+            SUDO='echo | sudo -S'
+            \$SUDO mkdir -p /opt/colday_ru/data /opt/colday_ru/uploads
+            \$SUDO tar xzf ~/deploy.tar.gz -C /opt/colday_ru --strip-components=1
             cd /opt/colday_ru
-            sudo docker compose pull
-            sudo docker compose up -d
+            \$SUDO docker compose pull
+            \$SUDO docker compose up -d
           "
