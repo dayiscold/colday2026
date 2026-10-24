@@ -134,6 +134,20 @@ func main() {
 	a := auth.New(cfg.adminPassword, cfg.sessionKey, cfg.cookieSecure)
 	h := handlers.New(st, a, cfg.uploadsDir, cfg.uploadsURL, cfg.staticDir)
 
+	srv := &http.Server{
+		Addr:              cfg.addr,
+		Handler:           newRouter(cfg, h),
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30 * time.Second,
+	}
+	log.Printf("colday listening on %s", cfg.addr)
+	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		log.Fatalf("listen: %v", err)
+	}
+}
+
+func newRouter(cfg *config, h *handlers.Handler) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -153,6 +167,8 @@ func main() {
 		http.ServeFile(w, r, filepath.Join(cfg.staticDir, "favicon.svg"))
 	})
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(cfg.staticDir))))
+	// Uploads may live outside the read-only static directory.
+	mux.Handle(cfg.uploadsURL, http.StripPrefix(cfg.uploadsURL, http.FileServer(http.Dir(cfg.uploadsDir))))
 
 	mux.HandleFunc("POST /api/login", h.Login)
 	mux.HandleFunc("POST /api/logout", h.Logout)
@@ -166,15 +182,5 @@ func main() {
 
 	mux.HandleFunc("POST /api/upload-cover", h.RequireAuth(h.UploadCover))
 
-	srv := &http.Server{
-		Addr:              cfg.addr,
-		Handler:           mux,
-		ReadHeaderTimeout: 10 * time.Second,
-		ReadTimeout:       30 * time.Second,
-		WriteTimeout:      30 * time.Second,
-	}
-	log.Printf("colday listening on %s", cfg.addr)
-	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		log.Fatalf("listen: %v", err)
-	}
+	return mux
 }

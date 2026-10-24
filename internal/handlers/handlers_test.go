@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -30,6 +31,15 @@ func newTestHarness(t *testing.T) (*Handler, *store.Store, *auth.Auth, string) {
 	uploadsDir := filepath.Join(dir, "uploads")
 	h := New(s, a, uploadsDir, "/uploads/", dir)
 	return h, s, a, dir
+}
+
+func createRelease(t *testing.T, s *store.Store, rel models.Release) models.Release {
+	t.Helper()
+	created, err := s.Create(rel)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return created
 }
 
 func readResponse(t *testing.T, rr *httptest.ResponseRecorder) (int, map[string]any) {
@@ -83,8 +93,8 @@ func TestListReleases_Empty(t *testing.T) {
 
 func TestListReleases(t *testing.T) {
 	h, s, _, _ := newTestHarness(t)
-	s.Create(models.Release{Title: "Alpha", ReleaseType: "album"})
-	s.Create(models.Release{Title: "Beta", ReleaseType: "single"})
+	createRelease(t, s, models.Release{Title: "Alpha", ReleaseType: "album"})
+	createRelease(t, s, models.Release{Title: "Beta", ReleaseType: "single"})
 
 	rr := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/releases", nil)
@@ -101,9 +111,9 @@ func TestListReleases(t *testing.T) {
 
 func TestListReleases_FeaturedFirst(t *testing.T) {
 	h, s, _, _ := newTestHarness(t)
-	s.Create(models.Release{Title: "A"})
-	s.Create(models.Release{Title: "B", Featured: true})
-	s.Create(models.Release{Title: "C"})
+	createRelease(t, s, models.Release{Title: "A"})
+	createRelease(t, s, models.Release{Title: "B", Featured: true})
+	createRelease(t, s, models.Release{Title: "C"})
 
 	rr := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/releases", nil)
@@ -180,7 +190,7 @@ func TestCreateRelease_EmptyTitle(t *testing.T) {
 
 func TestCreateRelease_Featured(t *testing.T) {
 	h, s, a, _ := newTestHarness(t)
-	s.Create(models.Release{Title: "Old Featured", Featured: true})
+	createRelease(t, s, models.Release{Title: "Old Featured", Featured: true})
 
 	body := bodyReader(models.Release{Title: "New Featured", Featured: true})
 	rr := httptest.NewRecorder()
@@ -240,7 +250,7 @@ func TestCreateRelease_UnknownFields(t *testing.T) {
 
 func TestGetRelease(t *testing.T) {
 	h, s, _, _ := newTestHarness(t)
-	created := s.Create(models.Release{Title: "Found Me"})
+	created := createRelease(t, s, models.Release{Title: "Found Me"})
 
 	rr := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/releases/1", nil)
@@ -303,7 +313,7 @@ func TestUpdateRelease_Unauthorized(t *testing.T) {
 
 func TestUpdateRelease(t *testing.T) {
 	h, s, a, _ := newTestHarness(t)
-	s.Create(models.Release{Title: "Original"})
+	createRelease(t, s, models.Release{Title: "Original"})
 
 	body := bodyReader(models.Release{
 		Title:       "Updated",
@@ -349,8 +359,8 @@ func TestUpdateRelease_NotFound(t *testing.T) {
 
 func TestUpdateRelease_FeaturedClearsOthers(t *testing.T) {
 	h, s, a, _ := newTestHarness(t)
-	s.Create(models.Release{Title: "A", Featured: true})
-	s.Create(models.Release{Title: "B"})
+	createRelease(t, s, models.Release{Title: "A", Featured: true})
+	createRelease(t, s, models.Release{Title: "B"})
 
 	body := bodyReader(models.Release{Title: "B Updated", Featured: true})
 	rr := httptest.NewRecorder()
@@ -377,7 +387,7 @@ func TestUpdateRelease_FeaturedClearsOthers(t *testing.T) {
 
 func TestUpdateRelease_EmptyTitle(t *testing.T) {
 	h, s, a, _ := newTestHarness(t)
-	s.Create(models.Release{Title: "Original"})
+	createRelease(t, s, models.Release{Title: "Original"})
 
 	body := bodyReader(models.Release{Title: ""})
 	rr := httptest.NewRecorder()
@@ -410,7 +420,7 @@ func TestDeleteRelease_Unauthorized(t *testing.T) {
 
 func TestDeleteRelease(t *testing.T) {
 	h, s, a, _ := newTestHarness(t)
-	s.Create(models.Release{Title: "To Delete"})
+	createRelease(t, s, models.Release{Title: "To Delete"})
 
 	rr := httptest.NewRecorder()
 	r := httptest.NewRequest("DELETE", "/api/releases/1", nil)
@@ -659,6 +669,66 @@ func TestUploadCover_UnknownExtensionDefaultsToJpg(t *testing.T) {
 
 // ---- Store persistence ----
 
+func TestWriteErrorsReturn500(t *testing.T) {
+	for _, method := range []string{"POST", "PUT", "DELETE"} {
+		t.Run(method, func(t *testing.T) {
+			h, s, _, dir := newTestHarness(t)
+			createRelease(t, s, models.Release{Title: "Original", Featured: true})
+			path := filepath.Join(dir, "data.json")
+			if err := os.Remove(path); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Mkdir(path, 0755); err != nil {
+				t.Fatal(err)
+			}
+			rr := httptest.NewRecorder()
+			r := httptest.NewRequest(method, "/api/releases/1", bodyReader(models.Release{Title: "Changed"}))
+			r.SetPathValue("id", "1")
+			switch method {
+			case "POST":
+				h.CreateRelease(rr, r)
+			case "PUT":
+				h.UpdateRelease(rr, r)
+			case "DELETE":
+				h.DeleteRelease(rr, r)
+			}
+			if rr.Code != http.StatusInternalServerError {
+				t.Fatalf("expected 500 for disk error, got %d: %s", rr.Code, rr.Body.String())
+			}
+			if releases := s.List(); len(releases) != 1 || releases[0].Title != "Original" || !releases[0].Featured {
+				t.Fatalf("failed write changed data: %+v", releases)
+			}
+		})
+	}
+}
+
+func TestUploadCoverTooLarge(t *testing.T) {
+	for _, size := range []int{maxCoverSize + 1, maxCoverSize + (2 << 20)} {
+		t.Run(strconv.Itoa(size), func(t *testing.T) {
+			h, _, _, dir := newTestHarness(t)
+			var body bytes.Buffer
+			w := multipart.NewWriter(&body)
+			file, err := w.CreateFormFile("file", "large.png")
+			if err != nil {
+				t.Fatal(err)
+			}
+			file.Write(make([]byte, size))
+			w.Close()
+			rr := httptest.NewRecorder()
+			r := httptest.NewRequest("POST", "/api/upload-cover", &body)
+			r.Header.Set("Content-Type", w.FormDataContentType())
+			h.UploadCover(rr, r)
+			if rr.Code != http.StatusRequestEntityTooLarge {
+				t.Fatalf("expected 413, got %d: %s", rr.Code, rr.Body.String())
+			}
+			entries, _ := os.ReadDir(filepath.Join(dir, "uploads"))
+			if len(entries) != 0 {
+				t.Fatal("oversized upload left a file")
+			}
+		})
+	}
+}
+
 func TestStore_Persistence(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "data.json")
@@ -667,7 +737,7 @@ func TestStore_Persistence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s1.Create(models.Release{Title: "Persist Me"})
+	createRelease(t, s1, models.Release{Title: "Persist Me"})
 
 	s2, err := store.NewStore(path)
 	if err != nil {
@@ -684,9 +754,9 @@ func TestStore_Persistence(t *testing.T) {
 func TestFeatured_OnlyOneFeatured(t *testing.T) {
 	h, s, a, _ := newTestHarness(t)
 
-	h.store.Create(models.Release{Title: "A", Featured: true})
-	h.store.Create(models.Release{Title: "B", Featured: true})
-	h.store.Create(models.Release{Title: "C", Featured: true})
+	createRelease(t, h.store, models.Release{Title: "A", Featured: true})
+	createRelease(t, h.store, models.Release{Title: "B", Featured: true})
+	createRelease(t, h.store, models.Release{Title: "C", Featured: true})
 
 	rels := s.List()
 	count := 0
@@ -788,11 +858,11 @@ func TestCreateRelease_MinimalFields(t *testing.T) {
 
 func TestUpdateRelease_PartialFields(t *testing.T) {
 	h, s, a, _ := newTestHarness(t)
-	s.Create(models.Release{
-		Title:       "Full",
-		ReleaseType: "album",
-		Bandlink:    "https://example.com",
-		UPC:         "123",
+	createRelease(t, s, models.Release{
+		Title:        "Full",
+		ReleaseType:  "album",
+		Bandlink:     "https://example.com",
+		UPC:          "123",
 		CounterSongs: 10,
 		SongDuration: "00:30:00",
 	})

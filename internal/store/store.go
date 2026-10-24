@@ -5,11 +5,14 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"sync"
 
 	"colday2026/internal/models"
 )
+
+var ErrNotFound = errors.New("release not found")
 
 type dataFile struct {
 	Releases []models.Release `json:"releases"`
@@ -34,6 +37,15 @@ func NewStore(filePath string) (*Store, error) {
 		if err := json.Unmarshal(raw, &s.data); err != nil {
 			return nil, err
 		}
+		// Older files may have a missing or stale counter. Never reuse an ID.
+		if s.data.NextID < 1 {
+			s.data.NextID = 1
+		}
+		for _, r := range s.data.Releases {
+			if r.ID >= s.data.NextID {
+				s.data.NextID = r.ID + 1
+			}
+		}
 		return s, nil
 	} else if !os.IsNotExist(err) {
 		return nil, err
@@ -43,7 +55,7 @@ func NewStore(filePath string) (*Store, error) {
 		Releases: []models.Release{},
 		NextID:   1,
 	}
-	if err := s.save(); err != nil {
+	if err := s.save(s.data); err != nil {
 		return nil, err
 	}
 	return s, nil
@@ -77,25 +89,28 @@ func (s *Store) Get(id int64) (models.Release, error) {
 			return r, nil
 		}
 	}
-	return models.Release{}, errors.New("release not found")
+	return models.Release{}, ErrNotFound
 }
 
-func (s *Store) Create(r models.Release) models.Release {
+func (s *Store) Create(r models.Release) (models.Release, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	r.ID = s.data.NextID
-	s.data.NextID++
+	next := s.snapshot()
+	r.ID = next.NextID
+	next.NextID++
 
 	if r.Featured {
-		for i := range s.data.Releases {
-			s.data.Releases[i].Featured = false
+		for i := range next.Releases {
+			next.Releases[i].Featured = false
 		}
 	}
 
-	s.data.Releases = append(s.data.Releases, r)
-	s.save()
-	return r
+	next.Releases = append(next.Releases, r)
+	if err := s.commit(next); err != nil {
+		return models.Release{}, err
+	}
+	return r, nil
 }
 
 func (s *Store) Update(r models.Release) error {
@@ -104,17 +119,18 @@ func (s *Store) Update(r models.Release) error {
 
 	for i, existing := range s.data.Releases {
 		if existing.ID == r.ID {
+			next := s.snapshot()
 			if r.Featured {
-				for j := range s.data.Releases {
-					s.data.Releases[j].Featured = false
+				for j := range next.Releases {
+					next.Releases[j].Featured = false
 				}
 			}
 			r.ID = existing.ID
-			s.data.Releases[i] = r
-			return s.save()
+			next.Releases[i] = r
+			return s.commit(next)
 		}
 	}
-	return errors.New("release not found")
+	return ErrNotFound
 }
 
 func (s *Store) Delete(id int64) error {
@@ -123,21 +139,50 @@ func (s *Store) Delete(id int64) error {
 
 	for i, r := range s.data.Releases {
 		if r.ID == id {
-			s.data.Releases = append(s.data.Releases[:i], s.data.Releases[i+1:]...)
-			return s.save()
+			next := s.snapshot()
+			next.Releases = append(next.Releases[:i], next.Releases[i+1:]...)
+			return s.commit(next)
 		}
 	}
-	return errors.New("release not found")
+	return ErrNotFound
 }
 
-func (s *Store) save() error {
-	raw, err := json.MarshalIndent(s.data, "", "  ")
+// Callers hold the write lock; publish changes only after persisting them.
+func (s *Store) snapshot() dataFile {
+	return dataFile{Releases: slices.Clone(s.data.Releases), NextID: s.data.NextID}
+}
+
+func (s *Store) commit(next dataFile) error {
+	if err := s.save(next); err != nil {
+		return err
+	}
+	s.data = next
+	return nil
+}
+
+func (s *Store) save(data dataFile) error {
+	raw, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
 		return err
 	}
-	tmp := s.filePath + ".tmp"
-	if err := os.WriteFile(tmp, raw, 0644); err != nil {
+	// Create beside the destination so rename stays on the same filesystem.
+	f, err := os.CreateTemp(filepath.Dir(s.filePath), ".colday-*.tmp")
+	if err != nil {
 		return err
 	}
-	return os.Rename(tmp, s.filePath)
+	defer os.Remove(f.Name())
+	defer f.Close()
+	if err := f.Chmod(0644); err != nil {
+		return err
+	}
+	if _, err := f.Write(raw); err != nil {
+		return err
+	}
+	if err := f.Sync(); err != nil {
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	return os.Rename(f.Name(), s.filePath)
 }

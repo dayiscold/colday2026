@@ -383,6 +383,7 @@
         <h2 class="list-title">Релизы</h2>
         <span id="list-count" class="list-count">0 релизов</span>
       </div>
+      <div id="list-err" class="form-err" role="alert"></div>
       <div id="empty" class="empty">Пока нет релизов — добавьте первый слева.</div>
       <div id="list" class="list"></div>
     </div>
@@ -432,13 +433,24 @@
   const state = {
     releases: [],
     draft: blank(),
-    editingId: null
+    editingId: null,
+    saving: false,
+    uploading: false
   };
+
+  function setBusy() {
+    const busy = state.saving || state.uploading;
+    document.querySelectorAll('.form-card input, .form-card select, .form-card button, .release-actions button').forEach(el => {
+      el.disabled = busy;
+    });
+    $('submit-btn').textContent = state.uploading ? 'Загрузка обложки…' : state.saving ? 'Сохранение…' : state.editingId ? 'Сохранить' : 'Добавить';
+  }
 
   // ---- API ----
   async function api(method, path, body, opts) {
     const init = {
       method,
+      cache: 'no-store',
       credentials: 'same-origin',
       headers: {}
     };
@@ -450,7 +462,7 @@
     if (res.status === 401) {
       if (!(opts && opts.allow401)) {
         showLock();
-        throw new Error('unauthorized');
+        throw new Error('Сессия истекла. Войдите снова, чтобы сохранить изменения.');
       }
     }
     const text = await res.text();
@@ -485,6 +497,7 @@
   }
 
   function showLock() {
+    if (!$('app-view').classList.contains('hidden')) readDraftFromForm();
     $('lock-view').classList.remove('hidden');
     $('app-view').classList.add('hidden');
     setTimeout(() => $('lock-pass').focus(), 30);
@@ -493,8 +506,6 @@
   async function showApp() {
     $('lock-view').classList.add('hidden');
     $('app-view').classList.remove('hidden');
-    state.draft = blank();
-    state.editingId = null;
     syncDraftToForm();
     await loadReleases();
   }
@@ -503,9 +514,11 @@
     try {
       const data = await api('GET', '/api/releases');
       state.releases = Array.isArray(data) ? data : [];
+      $('list-err').textContent = '';
     } catch (e) {
-      state.releases = [];
-      showToast('Не удалось загрузить релизы', true);
+      $('list-err').textContent = 'Не удалось загрузить релизы. Обновите страницу, чтобы повторить.';
+      showToast(e.message || 'Не удалось загрузить релизы', true);
+      return;
     }
     renderList();
   }
@@ -514,7 +527,10 @@
   function syncDraftToForm() {
     const d = state.draft;
     $('draft-title').value = d.title || '';
-    $('draft-type').value = d.release_type || 'Single';
+    const type = $('draft-type');
+    const selected = Array.from(type.options).find(option => option.value.toLowerCase() === (d.release_type || 'Single').toLowerCase());
+    if (!selected) type.add(new Option(d.release_type, d.release_type));
+    type.value = selected ? selected.value : d.release_type;
     $('draft-date').value = (d.original_date || '').slice(0, 10);
     $('draft-songs').value = d.counter_songs != null ? d.counter_songs : '';
     $('draft-duration').value = d.song_duration || '';
@@ -527,6 +543,7 @@
     $('submit-btn').textContent = state.editingId ? 'Сохранить' : 'Добавить';
     $('reset-btn').textContent = state.editingId ? 'Отмена' : 'Очистить';
     $('form-err').textContent = '';
+    setBusy();
   }
 
   function setCoverPreview(src) {
@@ -544,8 +561,16 @@
   }
 
   async function onCoverPick(e) {
+    if (state.saving || state.uploading) return;
     const f = e.target.files && e.target.files[0];
     if (!f) return;
+    if (f.size > 8 * 1024 * 1024) {
+      showToast('Обложка должна быть не больше 8 МБ', true);
+      e.target.value = '';
+      return;
+    }
+    state.uploading = true;
+    setBusy();
     const fd = new FormData();
     fd.append('file', f);
     try {
@@ -558,9 +583,11 @@
       setCoverPreview(data.url);
       showToast('Обложка загружена');
     } catch (err) {
-      showToast('Не удалось загрузить обложку', true);
+      showToast(err.message || 'Не удалось загрузить обложку', true);
     } finally {
       e.target.value = '';
+      state.uploading = false;
+      setBusy();
     }
   }
 
@@ -583,14 +610,16 @@
   }
 
   async function submit() {
+    if (state.saving || state.uploading) return;
     readDraftFromForm();
     const d = state.draft;
     if (!d.title) {
       $('form-err').textContent = 'Укажите название релиза';
       return;
     }
-    const btn = $('submit-btn');
-    btn.disabled = true;
+    state.saving = true;
+    $('form-err').textContent = '';
+    setBusy();
     try {
       const payload = {
         title: d.title,
@@ -617,11 +646,13 @@
     } catch (e) {
       $('form-err').textContent = e.message || 'Ошибка сохранения';
     } finally {
-      btn.disabled = false;
+      state.saving = false;
+      setBusy();
     }
   }
 
   function edit(id) {
+    if (state.saving || state.uploading) return;
     const r = state.releases.find(x => String(x.id) === String(id));
     if (!r) return;
     state.draft = Object.assign(blank(), r);
@@ -631,7 +662,10 @@
   }
 
   async function remove(id) {
+    if (state.saving || state.uploading) return;
     if (!window.confirm('Удалить релиз?')) return;
+    state.saving = true;
+    setBusy();
     try {
       await api('DELETE', '/api/releases/' + id);
       if (String(state.editingId) === String(id)) {
@@ -643,10 +677,14 @@
       showToast('Удалено');
     } catch (e) {
       showToast(e.message || 'Не удалось удалить', true);
+    } finally {
+      state.saving = false;
+      setBusy();
     }
   }
 
   function resetForm() {
+    if (state.saving || state.uploading) return;
     state.draft = blank();
     state.editingId = null;
     syncDraftToForm();

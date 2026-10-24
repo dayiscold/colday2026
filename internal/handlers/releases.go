@@ -1,12 +1,14 @@
 package handlers
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"colday2026/internal/models"
+	"colday2026/internal/store"
 )
 
 func (h *Handler) ListReleases(w http.ResponseWriter, r *http.Request) {
@@ -24,7 +26,11 @@ func (h *Handler) CreateRelease(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "title required"})
 		return
 	}
-	rel = h.store.Create(rel)
+	rel, err := h.store.Create(rel)
+	if err != nil {
+		h.storeError(w, "createRelease", err)
+		return
+	}
 	writeJSON(w, http.StatusCreated, rel)
 }
 
@@ -59,8 +65,7 @@ func (h *Handler) UpdateRelease(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.store.Update(rel); err != nil {
-		log.Printf("updateRelease: %v", err)
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
+		h.storeError(w, "updateRelease", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, rel)
@@ -73,8 +78,17 @@ func (h *Handler) DeleteRelease(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.store.Delete(id); err != nil {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
+		h.storeError(w, "deleteRelease", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+func (h *Handler) storeError(w http.ResponseWriter, operation string, err error) {
+	if errors.Is(err, store.ErrNotFound) {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
+		return
+	}
+	log.Printf("%s: %v", operation, err)
+	writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Не удалось сохранить данные. Проверьте доступ к хранилищу."})
 }

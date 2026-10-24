@@ -1,10 +1,13 @@
 sql
+.git
+.github
 .venv
 .idea
 /colday2026.exe
 static/uploads/
 /colday2026
 .env
+.env.*
 CLAUDE.md
 database
 data
