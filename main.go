@@ -155,7 +155,11 @@ func newRouter(cfg *config, h *handlers.Handler) http.Handler {
 			http.NotFound(w, r)
 			return
 		}
-		http.ServeFile(w, r, filepath.Join(cfg.staticDir, "colday.html"))
+		http.ServeFile(w, r, filepath.Join(cfg.staticDir, "app", "index.html"))
+	})
+	// Preserve the former public HTML URL after moving to a compiled React app.
+	mux.HandleFunc("/static/colday.html", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(cfg.staticDir, "app", "index.html"))
 	})
 	mux.HandleFunc("/admin", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(cfg.staticDir, "goatadmin.html"))

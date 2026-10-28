@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"mime/multipart"
@@ -820,7 +821,15 @@ func TestAuth_ExpiredCookie(t *testing.T) {
 func TestAuth_TamperedCookie(t *testing.T) {
 	h, _, a, _ := newTestHarness(t)
 	valid := a.SessionCookieValue()
-	tampered := valid[:len(valid)-1] + "x"
+	parts := strings.SplitN(valid, ".", 2)
+	signature, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Alter a real signature bit: replacing the last base64 character can
+	// change only unused padding bits and leave the decoded signature intact.
+	signature[0] ^= 1
+	tampered := parts[0] + "." + base64.RawURLEncoding.EncodeToString(signature)
 
 	rr := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api/me", nil)

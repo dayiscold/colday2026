@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"colday2026/internal/auth"
@@ -16,6 +17,59 @@ import (
 	"colday2026/internal/models"
 	"colday2026/internal/store"
 )
+
+func TestPublicAppRoutes(t *testing.T) {
+	dir := t.TempDir()
+	cfg := &config{
+		staticDir:  filepath.Join(dir, "static"),
+		uploadsDir: filepath.Join(dir, "external-uploads"),
+		uploadsURL: "/static/uploads/",
+	}
+	files := map[string]string{
+		filepath.Join(cfg.staticDir, "app", "index.html"):       "<!doctype html><title>React app</title>",
+		filepath.Join(cfg.staticDir, "app", "assets", "app.js"): "console.log('app')",
+		filepath.Join(cfg.staticDir, "goatadmin.html"):          "<!doctype html><title>Admin</title>",
+		filepath.Join(cfg.uploadsDir, "cover.png"):              "cover",
+	}
+	for name, contents := range files {
+		if err := os.MkdirAll(filepath.Dir(name), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(name, []byte(contents), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	s, err := store.NewStore(filepath.Join(dir, "data.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := auth.New("testpass", bytes.Repeat([]byte{1}, 32), false)
+	router := newRouter(cfg, handlers.New(s, a, cfg.uploadsDir, cfg.uploadsURL, cfg.staticDir))
+	for _, tc := range []struct {
+		path        string
+		status      int
+		body        string
+		contentType string
+	}{
+		{"/", 200, "React app", "text/html"},
+		{"/static/colday.html", 200, "React app", "text/html"},
+		{"/static/app/assets/app.js", 200, "console.log", "javascript"},
+		{"/admin", 200, "Admin", "text/html"},
+		{"/admin/", 200, "Admin", "text/html"},
+		{"/static/uploads/cover.png", 200, "cover", "image/png"},
+		{"/missing", 404, "404", "text/plain"},
+		{"/static/app/assets/missing.js", 404, "404", "text/plain"},
+	} {
+		t.Run(tc.path, func(t *testing.T) {
+			r := httptest.NewRequest("GET", tc.path, nil)
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, r)
+			if w.Code != tc.status || !strings.Contains(w.Body.String(), tc.body) || !strings.Contains(w.Header().Get("Content-Type"), tc.contentType) {
+				t.Fatalf("%s: status=%d, type=%s, body=%s", tc.path, w.Code, w.Header().Get("Content-Type"), w.Body.String())
+			}
+		})
+	}
+}
 
 func TestAdminSaveAndUploadSurviveRestart(t *testing.T) {
 	dir := t.TempDir()

@@ -1,5 +1,9 @@
 sql
 .git
+node_modules/
+test-results/
+playwright-report/
+.cache/
 .github
 .venv
 .idea

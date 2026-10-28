@@ -1,6 +1,6 @@
 # Colday 2026
 
-Музыкальный сайт-визитка с админ-панелью. Сервер на Go, фронтенд — нативная SPA (vanilla JS).
+Музыкальный сайт-визитка с админ-панелью. Сервер на Go, публичная страница — React + TypeScript + Vite в стиле Linux-терминала. Админка использует HTML, CSS и vanilla JS.
 
 ## Архитектура
 
@@ -17,13 +17,15 @@ colday2026/
 │       ├── auth_handlers.go   #   login / logout / me
 │       ├── upload.go          #   загрузка обложек
 │       └── middleware.go      #   RequireAuth
+├── frontend/                 # React-компоненты, CSS, портрет и локальные шрифты
 ├── static/
-│   ├── colday.html            #   публичная страница
+│   ├── app/                  # Сборка Vite (генерируется, не хранится в Git)
 │   ├── goatadmin.html         #   админ-панель
 │   └── favicon.svg
 ├── data/
 │   └── data.json              #   файл БД (создаётся автоматически)
-├── Dockerfile
+├── package.json              # Команды фронтенда и браузерных тестов
+├── Dockerfile                # Сборка Node + Go, запуск distroless
 └── docker-compose.yml
 ```
 
@@ -92,7 +94,8 @@ colday2026/
 
 ### Статические файлы
 
-- `/` — публичная страница (`colday.html`)
+- `/` — публичная страница (`static/app/index.html` после сборки)
+- `/static/colday.html` — совместимый адрес той же публичной страницы
 - `/admin` — админ-панель (`goatadmin.html`)
 - `/static/*` — прочие статические файлы
 
@@ -100,27 +103,47 @@ colday2026/
 
 ### Локально (Go)
 
-```bash
-# Установить переменные окружения
-export COLDAY_ADMIN_PASSWORD=secret
+Нужны Go 1.26 и Node.js 24+. Создайте `.env` по `.env.example`, только если его ещё нет,
+и задайте `COLDAY_ADMIN_PASSWORD`. Существующий `.env` сохраняйте.
 
-# Запустить
+```bash
+npm ci
+npm run build
 go run .
 ```
+
+Сборка обязательна перед первым запуском Go и после изменения фронтенда. Vite записывает результат
+только в `static/app/`; админка и загруженные обложки не очищаются.
+
+Для разработки запустите Go и во втором терминале `npm run dev`. Откройте `http://127.0.0.1:5173/`:
+Vite обновляет React без перезагрузки, а запросы `/api`, `/static` и `/admin` направляет на Go
+по адресу `http://127.0.0.1:8080`. Для другого порта Go измените proxy в конфигурации Vite.
 
 ### Docker
 
 ```bash
 # Создать .env из шаблона и задать COLDAY_ADMIN_PASSWORD
-cp .env.example .env
+# Только если .env ещё не существует:
+test -e .env || cp .env.example .env
 
-# Запустить
-docker compose up -d --build
+# Установить зависимости на хосте (при первом запуске / изменении lock-файла)
+npm ci
+
+# Собрать React на хосте, затем собрать и запустить контейнеры
+npm run docker:up
 ```
 
 Сайт: `http://localhost:8080/`, админка: `http://localhost:8080/admin`.
 
-Приложение собирается статически (`CGO_ENABLED=0`) в отдельном Go-этапе. Финальный образ —
+Локальный Compose использует цель `local`: готовая сборка React берётся из `static/app/`,
+а Go-сервер собирается внутри Docker (`CGO_ENABLED=0`). Команда `npm run docker:up`
+сначала обновляет React на хосте. Это позволяет использовать настроенные сертификаты Windows
+для npm, если HTTPS в контейнере перехватывает Kaspersky. Для сборки без запуска используйте
+`npm run docker:build`. Эквивалент вручную: `npm run build`, затем `docker compose up -d --build`.
+
+Обычный `docker build -t colday2026 .` использует цель `production` и собирает фронтенд
+в Node.js 24 внутри Docker; этот путь используется в CI и не требует готового `static/app/`.
+Node.js в финальный образ не попадает. Финальный образ —
 [`gcr.io/distroless/static-debian13:nonroot`](https://github.com/GoogleContainerTools/distroless):
 без shell и пакетного менеджера, пользователь `65532:65532`. Корневая файловая система
 контейнера в Compose доступна только для чтения; `/tmp` — небольшой tmpfs.
@@ -171,10 +194,21 @@ docker compose up -d
 ## Тесты
 
 ```bash
-go test -race ./...
-# Проверки админки без дополнительных npm-зависимостей (Node.js 22+)
+go test ./...
+go vet ./...
 node --test tests/admin.test.cjs
+npm run build
+npx playwright install chromium
+npm run test:e2e
 ```
+
+При изменении конкурентного кода дополнительно выполняйте `go test -race ./...`, если окружение
+поддерживает race detector. В Linux CI браузер устанавливается через `npx playwright install --with-deps chromium`.
+
+Playwright запускает настоящий Go-сервер на `127.0.0.1:18765` с временными данными, тестовым паролем
+и отдельным каталогом загрузок. Рабочий `.env` и данные не изменяются. Проверки публичной страницы
+включают API, обновление при фокусе, ошибки, управление эффектами, клавиатуру и размеры от 320 px до
+2560×1440. Скриншоты сохраняются в `test-results/`.
 
 - CRUD релизов (включая featured-логику, граничные случаи)
 - Аутентификация (вход/выход, неверный пароль, просроченная кука)

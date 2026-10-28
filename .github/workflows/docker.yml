@@ -20,9 +20,24 @@ jobs:
         with:
           go-version: '1.26'
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
       - run: go test ./...
 
+      - run: go vet ./...
+
       - run: node --test tests/admin.test.cjs
+
+      - run: npx playwright install --with-deps chromium
+
+      - run: npm run test:e2e
 
   release:
     needs: test

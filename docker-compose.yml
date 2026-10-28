@@ -8,7 +8,9 @@ services:
       - ./static/uploads:/storage/uploads
 
   colday_app:
-    build: .
+    build:
+      context: .
+      target: local
     container_name: colday_app
     restart: unless-stopped
     depends_on:
