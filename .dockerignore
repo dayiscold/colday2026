@@ -1,11 +1,9 @@
-sql
 .git
 node_modules/
 test-results/
 playwright-report/
 .cache/
 .github
-.venv
 .idea
 /colday2026.exe
 static/uploads/
@@ -13,7 +11,4 @@ static/uploads/
 .env
 .env.*
 CLAUDE.md
-database
 data
-*.db
-sql

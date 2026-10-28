@@ -1,19 +1,19 @@
-.venv
+# Локальные настройки
+.idea/
+CLAUDE.md
+.env
+
+# Зависимости, сборка и результаты проверок
 node_modules/
-static/app/
+/static/app/
 test-results/
 playwright-report/
 .cache/
-.idea
-CLAUDE.md
-.env
-*.db
-database
-data
-.gitignore
-# Загруженные обложки релизов (создаётся сервером)
-static/uploads/
+
+# Рабочие данные и загруженные обложки
+/data/
+/static/uploads/
+
 # Бинарник Go
 /colday2026
 /colday2026.exe
-# сайт был написан до этого на python. сейчас go. бэкенд там крутится с фронтендом в контейнере. mysql на сервере без контейнеров. нужна полноценная админка. Go должна отдавать страницу cover text это s3 ссылка
